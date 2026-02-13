@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Service</title>
+</head>
+<body>
+  <h1>Auth Service</h1>
+  
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Şifre">
+  
+  <button onclick="login()">Giriş Yap</button>
+  <button onclick="makeApiCall()">API Çağrısı Yap</button>
+  <button onclick="logout()">Çıkış Yap</button>
+
+  <div id="result"></div>
+
+  <script>
+    const authServiceUrl = 'http://localhost:3000';
+    let deviceId = localStorage.getItem('deviceId');
+    
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('deviceId', deviceId);
+    }
+
+    let accessToken = null;
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const response = await fetch(`${authServiceUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include', // Cookie'leri al
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        accessToken = data.accessToken; // ← Access token'ı client'a kaydet
+        
+        // sales.com'un internal API'sine çağrı yapabilir
+        document.getElementById('result').innerHTML = `
+          ✅ Giriş başarılı!<br>
+          Access Token: ${accessToken.substring(0, 20)}...<br>
+          (Bu token'ı servisler arası iletişimde kullan)
+        `;
+      } else {
+        document.getElementById('result').innerHTML = `❌ Hata: ${data.error}`;
+      }
+    }
+
+    async function makeApiCall() {
+      if (!accessToken) {
+        alert('Lütfen önce giriş yapın');
+        return;
+      }
+
+      // sales.com'un internal API'sine (sales-api.example.com) çağrı yap
+      const response = await fetch('http://sales-api.example.com/api/orders', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}` // ← Access token'ı gönder
+        }
+      });
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+    }
+
+    async function logout() {
+      await fetch(`${authServiceUrl}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include'
+      });
+
+      accessToken = null;
+      document.getElementById('result').innerHTML = '✅ Çıkış yaptınız';
+    }
+
+    // Access Token'ı localStorage'a ya da sessionStorage'a kaydedebilirsin
+    // ama refresh token asla! (HTTP-Only cookie'de güvende)
+  </script>
+</body>
+</html>

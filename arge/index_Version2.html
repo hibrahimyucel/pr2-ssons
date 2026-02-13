@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Service - HTTP-Only Cookies</title>
+</head>
+<body>
+  <h1>Auth Service Test</h1>
+  
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Şifre">
+  <input type="text" id="name" placeholder="Ad (Kayıt için)">
+  
+  <button onclick="register()">Kayıt Ol</button>
+  <button onclick="login()">Giriş Yap</button>
+  <button onclick="getProfile()">Profili Gör</button>
+  <button onclick="logout()">Çıkış Yap</button>
+
+  <div id="result"></div>
+
+  <script>
+    const authServiceUrl = 'http://localhost:3000';
+    let deviceId = localStorage.getItem('deviceId');
+    
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('deviceId', deviceId);
+    }
+
+    async function register() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const name = document.getElementById('name').value;
+
+      const response = await fetch(`${authServiceUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include', // ← Cookie'leri gönder/al
+        body: JSON.stringify({ email, password, name })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Token localStorage'da DEĞIL, cookie'de!
+        document.getElementById('result').innerHTML = `
+          ✅ Kayıt başarılı! Hoşgeldiniz, ${data.user.name}
+        `;
+      } else {
+        document.getElementById('result').innerHTML = `❌ Hata: ${data.error}`;
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const response = await fetch(`${authServiceUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include', // ← HTTP-Only cookie'leri al
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        document.getElementById('result').innerHTML = `
+          ✅ Giriş başarılı! Hoşgeldiniz, ${data.user.name}
+        `;
+      } else {
+        document.getElementById('result').innerHTML = `❌ Hata: ${data.error}`;
+      }
+    }
+
+    async function getProfile() {
+      const response = await fetch(`${authServiceUrl}/api/auth/me`, {
+        credentials: 'include', // ← Cookie'leri otomatik gönder
+      });
+
+      if (response.ok) {
+        const user = await response.json();
+        document.getElementById('result').innerHTML = JSON.stringify(user, null, 2);
+      } else {
+        document.getElementById('result').innerHTML = '❌ Profil alınamadı';
+      }
+    }
+
+    async function logout() {
+      const response = await fetch(`${authServiceUrl}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include' // ← Cookie'leri gönder
+      });
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = '✅ ' + data.message;
+    }
+
+    // DevTools Console'da bakarak token göremeyeceğiz!
+    console.log('localStorage.getItem("accessToken"):', localStorage.getItem('accessToken')); // null
+    console.log('HTTP-Only cookies tarayıcı tarafından gizleniyor 🔒');
+  </script>
+</body>
+</html>

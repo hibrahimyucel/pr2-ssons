@@ -1,0 +1,32 @@
+{
+  "name": "auth-service-typescript",
+  "version": "1.0.0",
+  "description": "TypeScript Multi-domain authentication micro-service",
+  "main": "dist/auth-service.js",
+  "scripts": {
+    "start": "node dist/auth-service.js",
+    "dev": "ts-node src/auth-service.ts",
+    "build": "tsc",
+    "build:watch": "tsc --watch"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cookie-parser": "^1.4.6",
+    "jsonwebtoken": "8.5.1",
+    "bcryptjs": "^2.4.3",
+    "mysql2": "^3.6.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.0.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "@types/jsonwebtoken": "9.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/cookie-parser": "^1.4.7"
+  }
+}

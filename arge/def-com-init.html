@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DEF.COM - Giriş Kontrol</title>
+</head>
+<body>
+  <h1>🔐 DEF.COM</h1>
+  <div id="result">Kontrol ediliyor...</div>
+
+  <script>
+    const AUTH_SERVICE = 'http://auth-service.com';
+
+    async function checkTokenFromABC() {
+      try {
+        // abc.com'dan geçici token (URL'de veya session'da)
+        let accessToken = localStorage.getItem('accessToken');
+
+        if (!accessToken) {
+          // abc.com'dan gelmişse URL'de olabilir
+          const params = new URLSearchParams(window.location.search);
+          accessToken = params.get('token');
+
+          if (!accessToken) {
+            document.getElementById('result').innerHTML = `
+              ❌ Oturum bilgisi bulunamadı<br>
+              <a href="http://abc.com:3000">ABC.COM'da Giriş Yap →</a>
+            `;
+            return;
+          }
+        }
+
+        // Auth Service'e token doğrulatma iste
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/get-tokens`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Token geçerli! DEF.COM'da oturum aç
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('deviceId', 'device_def_' + Date.now());
+
+          document.getElementById('result').innerHTML = `
+            ✅ DEF.COM'da oturum açtınız!<br>
+            Kullanıcı: ${data.user.email}<br>
+            <br>
+            <a href="/dashboard">Dashboard'a Git →</a>
+          `;
+        } else {
+          document.getElementById('result').innerHTML = `
+            ❌ Token geçersiz: ${data.error}<br>
+            <a href="http://abc.com:3000">Tekrar Giriş Yap →</a>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          ❌ Hata: ${error.message}<br>
+          <a href="http://abc.com:3000">ABC.COM'da Giriş Yap →</a>
+        `;
+      }
+    }
+
+    // Sayfa yüklendiğinde kontrol et
+    window.onload = checkTokenFromABC;
+  </script>
+</body>
+</html>

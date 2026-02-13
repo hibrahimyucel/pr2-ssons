@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Service Test</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, button { padding: 8px; margin: 5px; }
+    button { cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    #result { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>🔐 Auth Service Test</h1>
+
+  <h2>Kayıt Ol</h2>
+  <input type="email" id="regEmail" placeholder="Email" value="test@example.com">
+  <input type="password" id="regPassword" placeholder="Şifre" value="sifre123">
+  <input type="text" id="regName" placeholder="Ad" value="Test User">
+  <button onclick="register()">Kayıt Ol</button>
+
+  <h2>Giriş Yap</h2>
+  <input type="email" id="loginEmail" placeholder="Email" value="test@example.com">
+  <input type="password" id="loginPassword" placeholder="Şifre" value="sifre123">
+  <button onclick="login()">Giriş Yap</button>
+
+  <h2>İşlemler</h2>
+  <button onclick="getProfile()">Profili Gör</button>
+  <button onclick="refreshToken()">Token Yenile</button>
+  <button onclick="logout()">Çıkış Yap</button>
+
+  <div id="result"></div>
+
+  <script>
+    const API_URL = 'http://localhost:3000';
+    let deviceId = localStorage.getItem('deviceId');
+    
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('deviceId', deviceId);
+    }
+
+    let accessToken = null;
+
+    async function register() {
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const name = document.getElementById('regName').value;
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include',
+          body: JSON.stringify({ email, password, name })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          accessToken = data.accessToken;
+          showResult(`✅ Kayıt başarılı!\n\nKullanıcı: ${data.user.name}\nAccess Token: ${accessToken.substring(0, 30)}...`, 'success');
+        } else {
+          showResult(`❌ Hata: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ Hata: ${error.message}`, 'error');
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include',
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          accessToken = data.accessToken;
+          showResult(`✅ Giriş başarılı!\n\nKullanıcı: ${data.user.name}\nAccess Token: ${accessToken.substring(0, 30)}...`, 'success');
+        } else {
+          showResult(`❌ Hata: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ Hata: ${error.message}`, 'error');
+      }
+    }
+
+    async function getProfile() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showResult(`✅ Profil Bilgisi:\n\n${JSON.stringify(data, null, 2)}`, 'success');
+        } else {
+          showResult(`❌ Hata: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ Hata: ${error.message}`, 'error');
+      }
+    }
+
+    async function refreshToken() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          accessToken = data.accessToken;
+          showResult(`✅ Token yenilendi!\n\nYeni Access Token: ${accessToken.substring(0, 30)}...`, 'success');
+        } else {
+          showResult(`❌ Hata: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ Hata: ${error.message}`, 'error');
+      }
+    }
+
+    async function logout() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          accessToken = null;
+          showResult(`✅ ${data.message}`, 'success');
+        } else {
+          showResult(`❌ Hata: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ Hata: ${error.message}`, 'error');
+      }
+    }
+
+    function showResult(message, type) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = type;
+      resultDiv.innerText = message;
+    }
+
+    // Page load'da device ID'yi göster
+    window.onload = () => {
+      showResult(`Device ID: ${deviceId}`, 'success');
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DEF.COM - Dashboard</title>
+</head>
+<body>
+  <h1>🏠 DEF.COM - Dashboard</h1>
+  
+  <button onclick="checkAuth()">Oturum Kontrol</button>
+  <button onclick="logout()">Çıkış Yap</button>
+  <button onclick="goToAbc()">ABC.COM'a Git</button>
+
+  <div id="result"></div>
+
+  <script>
+    const AUTH_SERVICE = 'https://auth-service.com';
+
+    async function checkAuth() {
+      try {
+        const accessToken = localStorage.getItem('accessToken');
+
+        if (!accessToken) {
+          document.getElementById('result').innerHTML = `
+            ❌ Oturum açmamışsınız<br>
+            <a href="https://abc.com/login">ABC.COM'da Giriş Yap →</a>
+          `;
+          return;
+        }
+
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          // Token süresi dolmuş, yenile
+          const refreshed = await refreshAccessToken();
+          if (refreshed) {
+            return checkAuth(); // Tekrar dene
+          }
+        }
+
+        const user = await response.json();
+
+        if (response.ok) {
+          document.getElementById('result').innerHTML = `
+            ✅ Oturum Açık!<br>
+            <br>
+            Kullanıcı: <strong>${user.name}</strong><br>
+            Email: ${user.email}<br>
+            ID: ${user.id}
+          `;
+        } else {
+          throw new Error(user.error || 'Bilgi alınamadı');
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          ❌ Hata: ${error.message}
+        `;
+      }
+    }
+
+    async function refreshAccessToken() {
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        const deviceId = localStorage.getItem('deviceId');
+
+        if (!refreshToken) return false;
+
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.accessToken) {
+          localStorage.setItem('accessToken', data.accessToken);
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error('Token yenileme hatası:', error);
+        return false;
+      }
+    }
+
+    async function logout() {
+      try {
+        const deviceId = localStorage.getItem('deviceId');
+
+        await fetch(`${AUTH_SERVICE}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include'
+        });
+
+        localStorage.clear();
+
+        document.getElementById('result').innerHTML = `
+          ✅ Çıkış yapıldı<br>
+          <a href="https://abc.com/login">ABC.COM'da Giriş Yap →</a>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `❌ Hata: ${error.message}`;
+      }
+    }
+
+    function goToAbc() {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        // ABC.COM'a token ile git
+        window.location.href = `https://abc.com/callback#token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(localStorage.getItem('refreshToken'))}&device=${localStorage.getItem('deviceId')}`;
+      } else {
+        window.location.href = 'https://abc.com/login';
+      }
+    }
+
+    // Sayfa yüklendiğinde kontrol et
+    window.onload = checkAuth;
+  </script>
+</body>
+</html>

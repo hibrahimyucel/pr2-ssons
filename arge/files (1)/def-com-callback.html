@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DEF.COM - Giriş İşleniyor</title>
+</head>
+<body>
+  <h1>🔄 DEF.COM'a Giriş Yapılıyor...</h1>
+  <div id="result"></div>
+
+  <script>
+    /**
+     * URL fragment'ten token'ları al
+     * URL: def.com/#token=eyJ...&refresh=eyJ...&device=device_123
+     */
+    function getTokensFromUrl() {
+      const hash = window.location.hash.substring(1); // '#' kaldır
+      const params = new URLSearchParams(hash);
+
+      return {
+        accessToken: params.get('token'),
+        refreshToken: params.get('refresh'),
+        deviceId: params.get('device')
+      };
+    }
+
+    async function authenticateFromToken() {
+      try {
+        const { accessToken, refreshToken, deviceId } = getTokensFromUrl();
+
+        if (!accessToken || !refreshToken) {
+          document.getElementById('result').innerHTML = `
+            ❌ Token bulunamadı<br>
+            <a href="https://abc.com/login">ABC.COM'da Giriş Yap →</a>
+          `;
+          return;
+        }
+
+        // Token'ları localStorage'a kaydet
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('deviceId', deviceId);
+
+        // Token doğrudan auth service'e sor
+        const AUTH_SERVICE = 'https://auth-service.com';
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          credentials: 'include'
+        });
+
+        const user = await response.json();
+
+        if (response.ok) {
+          document.getElementById('result').innerHTML = `
+            ✅ DEF.COM'da Giriş Başarılı!<br>
+            <br>
+            Hoşgeldiniz, <strong>${user.name}</strong>!<br>
+            Email: ${user.email}<br>
+            <br>
+            <a href="/dashboard">Dashboard'a Git →</a>
+          `;
+
+          // URL'den fragment'i sil (temizlik)
+          window.history.replaceState({}, document.title, window.location.pathname);
+
+          // 2 saniye sonra dashboard'a git
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+        } else {
+          throw new Error('Token doğrulaması başarısız');
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          ❌ Hata: ${error.message}<br>
+          <a href="https://abc.com/login">Tekrar Giriş Yap →</a>
+        `;
+      }
+    }
+
+    // Sayfa yüklendiğinde çalıştır
+    window.onload = authenticateFromToken;
+  </script>
+</body>
+</html>

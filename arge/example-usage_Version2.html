@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Helper Örneği</title>
+</head>
+<body>
+  <h1>Auth Service Test</h1>
+  
+  <div>
+    <h2>Kayıt Ol</h2>
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Şifre">
+    <input type="text" id="regName" placeholder="Ad">
+    <button onclick="testRegister()">Kayıt Ol</button>
+  </div>
+
+  <div>
+    <h2>Giriş Yap</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Şifre">
+    <button onclick="testLogin()">Giriş Yap</button>
+  </div>
+
+  <div>
+    <h2>İşlemler</h2>
+    <button onclick="testGetUser()">Profili Gör</button>
+    <button onclick="testApiCall()">API Çağrısı Yap (sales-api)</button>
+    <button onclick="testLogout()">Çıkış Yap</button>
+  </div>
+
+  <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; white-space: pre-wrap;"></div>
+
+  <script>
+    const auth = new AuthHelper('http://localhost:3000');
+
+    async function testRegister() {
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const name = document.getElementById('regName').value;
+
+      const result = await auth.register(email, password, name);
+      showResult(result);
+    }
+
+    async function testLogin() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      const result = await auth.login(email, password);
+      showResult(result);
+    }
+
+    async function testGetUser() {
+      const user = await auth.getUser();
+      if (user) {
+        showResult({ success: true, user });
+      } else {
+        showResult({ success: false, error: 'Oturum açmanız gerekli' });
+      }
+    }
+
+    async function testApiCall() {
+      try {
+        // sales.com'un internal API'sine çağrı yap
+        const response = await auth.authenticatedFetch('http://sales-api.example.com/api/orders');
+        const data = await response.json();
+        showResult({ success: response.ok, data });
+      } catch (error) {
+        showResult({ success: false, error: error instanceof Error ? error.message : 'Hata' });
+      }
+    }
+
+    async function testLogout() {
+      const result = await auth.logout();
+      showResult(result);
+    }
+
+    function showResult(data) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerText = JSON.stringify(data, null, 2);
+    }
+  </script>
+
+  <!-- AuthHelper script'i load et -->
+  <script src="path/to/client-auth-helper.ts"></script>
+</body>
+</html>

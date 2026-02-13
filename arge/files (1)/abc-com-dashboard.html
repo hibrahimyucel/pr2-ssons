@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ABC.COM - Dashboard</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    button { padding: 10px; margin: 5px; cursor: pointer; }
+    #tokens { background: #f0f0f0; padding: 10px; border-radius: 5px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>ABC.COM - Dashboard</h1>
+  
+  <button onclick="getTokensAndShareWithDef()">DEF.COM'a Giriş Yap</button>
+  <button onclick="logout()">Çıkış Yap</button>
+
+  <div id="tokens"></div>
+  <div id="result"></div>
+
+  <script>
+    const AUTH_SERVICE = 'http://auth-service.com';
+    const accessToken = localStorage.getItem('accessToken');
+
+    async function getTokensAndShareWithDef() {
+      try {
+        // Auth service'den token al
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/get-tokens`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Token'ları def.com'a gönder (secure iframe veya popup)
+          shareTokensWithDef(data);
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = '❌ Hata: ' + error.message;
+      }
+    }
+
+    function shareTokensWithDef(tokenData) {
+      // Popup açarak def.com'a yönlendir
+      const redirectUrl = new URL('http://def.com/callback');
+      redirectUrl.searchParams.append('accessToken', tokenData.accessToken);
+      redirectUrl.searchParams.append('deviceId', localStorage.getItem('deviceId'));
+
+      // XSS koruması: URL'yi encode et
+      window.open(redirectUrl.toString(), 'def_window', 'width=400,height=300');
+    }
+
+    async function logout() {
+      const response = await fetch(`${AUTH_SERVICE}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'X-Device-ID': localStorage.getItem('deviceId')
+        },
+        credentials: 'include'
+      });
+
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+  </script>
+</body>
+</html>

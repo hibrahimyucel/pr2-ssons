@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DEF.COM</title>
+</head>
+<body>
+  <h1>🔐 DEF.COM</h1>
+  
+  <button onclick="checkSession()">Session Kontrol</button>
+  <button onclick="logout()">Çıkış</button>
+
+  <div id="result"></div>
+
+  <script>
+    const AUTH_SERVICE = 'http://auth-service.local:3000';
+
+    async function checkSession() {
+      try {
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/check-session`, {
+          credentials: 'include' // ← Shared session cookie buradan gelir!
+        });
+
+        const data = await response.json();
+
+        if (data.authenticated) {
+          document.getElementById('result').innerHTML = `
+            ✅ DEF.COM'DA OTURUM AÇMIŞ!
+            
+            Kullanıcı: ${data.user.name}
+            Email: ${data.user.email}
+          `;
+        } else {
+          document.getElementById('result').innerHTML = `
+            ❌ Oturum yok
+            <a href="http://abc.local:3000">ABC.COM'da Giriş Yap</a>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `❌ Hata: ${error.message}`;
+      }
+    }
+
+    async function logout() {
+      await fetch(`${AUTH_SERVICE}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      document.getElementById('result').innerHTML = '✅ Çıkış yapıldı';
+    }
+
+    // Sayfa yüklendiğinde otomatik session kontrol
+    window.onload = checkSession;
+  </script>
+</body>
+</html>

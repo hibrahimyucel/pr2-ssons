@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ABC.COM</title>
+</head>
+<body>
+  <h1>🔐 ABC.COM</h1>
+  
+  <input type="email" id="email" placeholder="Email" value="user@example.com">
+  <input type="password" id="password" placeholder="Şifre" value="password123">
+  <button onclick="login()">Giriş Yap</button>
+  <button onclick="checkSession()">Session Kontrol</button>
+  <button onclick="logout()">Çıkış</button>
+
+  <div id="result"></div>
+
+  <script>
+    const AUTH_SERVICE = 'http://auth-service.local:3000';
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const deviceId = 'device_' + Date.now();
+
+      const response = await fetch(`${AUTH_SERVICE}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-ID': deviceId
+        },
+        credentials: 'include', // ← Session cookie al
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = 
+        `✅ Giriş başarılı!\nSession: ${data.sessionId?.substring(0, 20)}...`;
+    }
+
+    async function checkSession() {
+      const response = await fetch(`${AUTH_SERVICE}/api/auth/check-session`, {
+        credentials: 'include' // ← Session cookie otomatik gönder
+      });
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+    }
+
+    async function logout() {
+      await fetch(`${AUTH_SERVICE}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      document.getElementById('result').innerHTML = '✅ Çıkış yapıldı';
+    }
+  </script>
+</body>
+</html>

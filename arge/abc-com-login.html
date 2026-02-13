@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ABC.COM - Giriş</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, button { padding: 10px; margin: 5px; }
+    button { cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>🔐 ABC.COM - Giriş Yap</h1>
+  
+  <input type="email" id="email" placeholder="Email" value="user@example.com">
+  <input type="password" id="password" placeholder="Şifre" value="password123">
+  
+  <button onclick="login()">ABC.COM'da Giriş Yap</button>
+  <button onclick="loginAndGoToDef()">DEF.COM'a Git (Oturum Aç)</button>
+
+  <div id="result"></div>
+
+  <script>
+    const AUTH_SERVICE = 'https://auth-service.com';
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const deviceId = 'device_abc_' + Date.now();
+
+      try {
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email,
+            password,
+            redirectUrl: null // Sadece ABC.COM'da oturum aç
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Token'ları localStorage'a kaydet
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          localStorage.setItem('deviceId', data.deviceId);
+
+          document.getElementById('result').innerHTML = `
+            ✅ ABC.COM'da giriş başarılı!<br>
+            <a href="/dashboard">Dashboard'a Git →</a>
+          `;
+        } else {
+          document.getElementById('result').innerHTML = `❌ Hata: ${data.error}`;
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `❌ Hata: ${error.message}`;
+      }
+    }
+
+    async function loginAndGoToDef() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const deviceId = 'device_abc_' + Date.now();
+
+      try {
+        const response = await fetch(`${AUTH_SERVICE}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-ID': deviceId
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email,
+            password,
+            redirectUrl: 'https://def.com/callback' // ← DEF.COM'a redirect
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.redirectUrl) {
+          // Token ile def.com'a redirect et
+          // URL fragment'te token var: def.com/#token=xyz
+          window.location.href = data.redirectUrl;
+        } else {
+          document.getElementById('result').innerHTML = `❌ Hata: ${data.error}`;
+        }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `❌ Hata: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
